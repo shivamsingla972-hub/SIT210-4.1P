@@ -1,0 +1,91 @@
+#include <Wire.h>
+#include <BH1750.h>
+
+const int pirPin = 2;
+const int buttonPin = 3;
+
+const int led1 = 5;
+const int led2 = 6;
+
+// Change this value depending on how dark you want it
+const int darkThreshold = 50;
+
+volatile bool pirDetected = false;
+volatile bool buttonPressed = false;
+
+BH1750 lightMeter;
+
+void pirInterrupt() {
+  pirDetected = true;
+}
+
+void buttonInterrupt() {
+  buttonPressed = true;
+}
+
+void setup() {
+  Serial.begin(9600);
+
+  pinMode(pirPin, INPUT);
+  pinMode(buttonPin, INPUT_PULLUP);
+
+  pinMode(led1, OUTPUT);
+  pinMode(led2, OUTPUT);
+
+  digitalWrite(led1, LOW);
+  digitalWrite(led2, LOW);
+
+  // Start BH1750
+  Wire.begin();
+  lightMeter.begin();
+
+  // Interrupts
+  attachInterrupt(digitalPinToInterrupt(pirPin),
+                  pirInterrupt, RISING);
+
+  attachInterrupt(digitalPinToInterrupt(buttonPin),
+                  buttonInterrupt, FALLING);
+
+  Serial.println("System Started");
+}
+
+void loop() {
+
+  // Read light level from BH1750
+  float lux = lightMeter.readLightLevel();
+
+  Serial.print("Light Level: ");
+  Serial.print(lux);
+  Serial.println(" lux");
+
+  // PIR motion detection
+  if (pirDetected) {
+    pirDetected = false;
+
+    if (lux < darkThreshold) {
+      digitalWrite(led1, HIGH);
+      digitalWrite(led2, HIGH);
+
+      Serial.println("Motion detected and it is DARK!");
+      Serial.println("LED1 and LED2 ON");
+    }
+    else {
+      Serial.println("Motion detected but it is BRIGHT.");
+      Serial.println("LEDs remain OFF");
+    }
+  }
+
+  // Slider switch detection
+  if (buttonPressed) {
+    buttonPressed = false;
+
+    // Backup switch turns LEDs ON
+    digitalWrite(led1, HIGH);
+    digitalWrite(led2, HIGH);
+
+    Serial.println("Switch activated!");
+    Serial.println("LED1 and LED2 ON");
+  }
+
+  delay(500);
+}
